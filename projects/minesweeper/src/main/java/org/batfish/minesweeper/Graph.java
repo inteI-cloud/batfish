@@ -206,6 +206,7 @@ public class Graph {
     initIbgpNeighbors();
     initAreaIds();
     initDomains();
+    _allCommunities.addAll(findAllCommunities());
     // compute atomic predicates for the BDD-based analysis
     // ignore community regexes of type OTHER, which are not used by that analysis
     Set<CommunityVar> comms =
