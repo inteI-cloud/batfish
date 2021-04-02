@@ -93,8 +93,6 @@ public class TransferBDDTest {
   private Graph _g;
   private BDDRoute _anyRoute;
 
-  private static final String COMMUNITY_NAME = "community";
-
   private static final String AS_PATH_NAME = "asPathName";
 
   static final class MockBatfish extends IBatfishTestAdapter {

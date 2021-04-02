@@ -81,9 +81,6 @@ import org.junit.Test;
 public class SearchRoutePoliciesAnswererTest {
   private static final String HOSTNAME = "hostname";
   private static final String POLICY_NAME = "policy";
-  private static final String COMMUNITY_NAME = "community";
-  private static final String REGEX_COMMUNITY_NAME = "regexCommunity";
-  private static final String GENERAL_REGEX_COMMUNITY_NAME = "generalRegexCommunity";
   private static final String AS_PATH_1 = "asPath1";
   private static final String AS_PATH_2 = "asPath2";
 

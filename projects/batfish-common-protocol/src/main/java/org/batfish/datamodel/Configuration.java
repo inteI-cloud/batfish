@@ -134,7 +134,6 @@ public final class Configuration implements Serializable {
 
   private static final String PROP_AS_PATH_ACCESS_LISTS = "asPathAccessLists";
   private static final String PROP_AUTHENTICATION_KEY_CHAINS = "authenticationKeyChains";
-  private static final String PROP_COMMUNITY_LISTS = "communityLists";
   private static final String PROP_COMMUNITY_MATCH_EXPRS = "communityMatchExprs";
   private static final String PROP_COMMUNITY_SET_EXPRS = "communitySetExprs";
   private static final String PROP_COMMUNITY_SET_MATCH_EXPRS = "communitySetMatchExprs";
