@@ -4,7 +4,6 @@ import static org.junit.Assert.assertEquals;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedMap;
 import java.util.Map;
 import java.util.Set;
@@ -15,7 +14,6 @@ import org.batfish.datamodel.Configuration;
 import org.batfish.datamodel.ConfigurationFormat;
 import org.batfish.datamodel.LineAction;
 import org.batfish.datamodel.NetworkFactory;
-import org.batfish.datamodel.RegexCommunitySet;
 import org.batfish.datamodel.bgp.community.StandardCommunity;
 import org.batfish.datamodel.routing_policy.communities.ColonSeparatedRendering;
 import org.batfish.datamodel.routing_policy.communities.CommunityAcl;
@@ -33,7 +31,6 @@ import org.batfish.datamodel.routing_policy.communities.StandardCommunityHighMat
 import org.batfish.datamodel.routing_policy.communities.StandardCommunityLowMatch;
 import org.batfish.datamodel.routing_policy.expr.IntComparator;
 import org.batfish.datamodel.routing_policy.expr.IntComparison;
-import org.batfish.datamodel.routing_policy.expr.LiteralCommunity;
 import org.batfish.datamodel.routing_policy.expr.LiteralInt;
 import org.batfish.minesweeper.CommunityVar;
 import org.batfish.minesweeper.Graph;
@@ -61,18 +58,7 @@ public class CommunityMatchExprToBDDTest {
 
     _batfish = new TransferBDDTest.MockBatfish(ImmutableSortedMap.of(HOSTNAME, _baseConfig));
 
-    _g =
-        new Graph(
-            _batfish,
-            _batfish.getSnapshot(),
-            null,
-            null,
-            ImmutableSet.of(
-                new RegexCommunitySet("^20:"),
-                new RegexCommunitySet(":30$"),
-                new LiteralCommunity(StandardCommunity.parse("20:30")),
-                new LiteralCommunity(StandardCommunity.parse("21:30"))),
-            null);
+    _g = new Graph(_batfish, _batfish.getSnapshot(), null, null, null);
     BDDRoute bddRoute = new BDDRoute(_g);
     TransferBDD transferBDD = new TransferBDD(_g, _baseConfig, ImmutableList.of());
     _arg = new CommunitySetMatchExprToBDD.Arg(transferBDD, bddRoute);

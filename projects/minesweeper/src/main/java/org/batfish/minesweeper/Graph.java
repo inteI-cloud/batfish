@@ -19,7 +19,6 @@ import java.util.SortedMap;
 import java.util.SortedSet;
 import java.util.TreeMap;
 import java.util.regex.Matcher;
-import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.apache.commons.lang3.SerializationUtils;
@@ -31,7 +30,6 @@ import org.batfish.datamodel.AsPathAccessListLine;
 import org.batfish.datamodel.BgpActivePeerConfig;
 import org.batfish.datamodel.BgpPeerConfig;
 import org.batfish.datamodel.BgpProcess;
-import org.batfish.datamodel.CommunityList;
 import org.batfish.datamodel.ConcreteInterfaceAddress;
 import org.batfish.datamodel.Configuration;
 import org.batfish.datamodel.Interface;
@@ -39,7 +37,6 @@ import org.batfish.datamodel.Ip;
 import org.batfish.datamodel.LongSpace;
 import org.batfish.datamodel.Prefix;
 import org.batfish.datamodel.PrefixRange;
-import org.batfish.datamodel.RegexCommunitySet;
 import org.batfish.datamodel.RoutingProtocol;
 import org.batfish.datamodel.StaticRoute;
 import org.batfish.datamodel.Topology;
@@ -50,7 +47,6 @@ import org.batfish.datamodel.ospf.OspfArea;
 import org.batfish.datamodel.ospf.OspfProcess;
 import org.batfish.datamodel.routing_policy.RoutingPolicy;
 import org.batfish.datamodel.routing_policy.expr.BooleanExpr;
-import org.batfish.datamodel.routing_policy.expr.CommunitySetExpr;
 import org.batfish.datamodel.routing_policy.expr.Conjunction;
 import org.batfish.datamodel.routing_policy.expr.ExplicitPrefixSet;
 import org.batfish.datamodel.routing_policy.expr.MatchPrefixSet;
@@ -59,7 +55,6 @@ import org.batfish.datamodel.routing_policy.expr.Not;
 import org.batfish.datamodel.routing_policy.expr.PrefixSetExpr;
 import org.batfish.datamodel.routing_policy.statement.Statement;
 import org.batfish.minesweeper.CommunityVar.Type;
-import org.batfish.minesweeper.bdd.CommunityVarConverter;
 import org.batfish.minesweeper.collections.Table2;
 import org.batfish.minesweeper.communities.RoutePolicyStatementVarCollector;
 
@@ -139,7 +134,7 @@ public class Graph {
 
   /** Create a graph. */
   public Graph(IBatfish batfish, NetworkSnapshot snapshot) {
-    this(batfish, snapshot, null, null, null, null);
+    this(batfish, snapshot, null, null, null);
   }
 
   /**
@@ -153,7 +148,6 @@ public class Graph {
       NetworkSnapshot snapshot,
       @Nullable Map<String, Configuration> configs,
       @Nullable Set<String> routers,
-      @Nullable Set<CommunitySetExpr> communities,
       @Nullable Set<String> asPathRegexes) {
     _batfish = batfish;
     _edgeMap = new HashMap<>();
@@ -212,7 +206,6 @@ public class Graph {
     initIbgpNeighbors();
     initAreaIds();
     initDomains();
-    initAllCommunities(communities);
     // compute atomic predicates for the BDD-based analysis
     // ignore community regexes of type OTHER, which are not used by that analysis
     Set<CommunityVar> comms =
@@ -221,7 +214,6 @@ public class Graph {
             .collect(ImmutableSet.toImmutableSet());
     _communityAtomicPredicates = new RegexAtomicPredicates<>(comms, CommunityVar.ALL_COMMUNITIES);
     _namedCommunities = new HashMap<>();
-    initNamedCommunities();
     _asPathRegexAtomicPredicates =
         new RegexAtomicPredicates<>(
             findAllAsPathRegexes(asPathRegexes), SymbolicAsPathRegex.ALL_AS_PATHS);
@@ -827,26 +819,6 @@ public class Graph {
   }
 
   /**
-   * Identifies all of the community literals and regexes in the given configurations. An optional
-   * set of additional community expressions (literals and regexes) is also included, which is used
-   * to support user-specified community constraints for symbolic analysis.
-   *
-   * <p>For each literal, a CommunityVar instance of type EXACT is created. For each regex, two
-   * CommunityVar instances are created: one of type REGEX to represent the regex itself, and one of
-   * type OTHER to represent unknown community literals that match this regex. The latter type are
-   * used in the SMT-based analyses but are ignored by the BDD-based analyses.
-   */
-  private void initAllCommunities(@Nullable Set<CommunitySetExpr> communities) {
-    _allCommunities.addAll(findAllCommunities());
-    if (communities != null) {
-      _allCommunities.addAll(
-          communities.stream()
-              .map(CommunityVarConverter::toCommunityVar)
-              .collect(Collectors.toSet()));
-    }
-  }
-
-  /**
    * Identifies all of the AS-path regexes in the given configurations. An optional set of
    * additional AS-path regexes is also included, which is used to support user-specified AS-path
    * constraints for symbolic analysis.
@@ -899,26 +871,6 @@ public class Graph {
           }
           if (c2.getType() == CommunityVar.Type.OTHER && c1.getRegex().equals(c2.getRegex())) {
             list.add(c2);
-          }
-        }
-      }
-    }
-  }
-
-  /*
-   * Map named community sets that contain a single match
-   * back to the community/regex value. This makes it
-   * easier to provide intuitive counter examples.
-   */
-  private void initNamedCommunities() {
-    for (Configuration conf : getConfigurations().values()) {
-      for (Entry<String, CommunityList> entry : conf.getCommunityLists().entrySet()) {
-        String name = entry.getKey();
-        CommunityList cl = entry.getValue();
-        if (cl != null && cl.getLines().size() == 1) {
-          CommunitySetExpr matchCondition = cl.getLines().get(0).getMatchCondition();
-          if (matchCondition instanceof RegexCommunitySet) {
-            _namedCommunities.put(((RegexCommunitySet) matchCondition).getRegex(), name);
           }
         }
       }
@@ -998,28 +950,6 @@ public class Graph {
         .map(AsPathAccessListLine::getRegex)
         .map(SymbolicAsPathRegex::new)
         .collect(ImmutableSet.toImmutableSet());
-  }
-
-  /*
-   * Map named community sets that contain a single match
-   * back to the community/regex value. This makes it
-   * easier to provide intuitive counter examples.
-   */
-  public Map<String, String> findNamedCommunities() {
-    Map<String, String> comms = new HashMap<>();
-    for (Configuration conf : getConfigurations().values()) {
-      for (Entry<String, CommunityList> entry : conf.getCommunityLists().entrySet()) {
-        String name = entry.getKey();
-        CommunityList cl = entry.getValue();
-        if (cl != null && cl.getLines().size() == 1) {
-          CommunitySetExpr matchCondition = cl.getLines().get(0).getMatchCondition();
-          if (matchCondition instanceof RegexCommunitySet) {
-            comms.put(((RegexCommunitySet) matchCondition).getRegex(), name);
-          }
-        }
-      }
-    }
-    return comms;
   }
 
   /*
