@@ -91,6 +91,7 @@ public final class SearchRoutePoliciesAnswerer extends Answerer {
   @Nonnull private final RoutingPolicySpecifier _policySpecifier;
   @Nonnull private final Action _action;
 
+  @Nonnull private final Set<String> _communityRegexes;
   @Nonnull private final Set<String> _asPathRegexes;
 
   public SearchRoutePoliciesAnswerer(SearchRoutePoliciesQuestion question, IBatfish batfish) {
@@ -105,6 +106,15 @@ public final class SearchRoutePoliciesAnswerer extends Answerer {
             question.getPolicies(), ALL_ROUTING_POLICIES);
     _action = question.getAction();
 
+    // in the future, it may improve performance to combine all input community regexes
+    // into a single regex representing their disjunction, and similarly for all output
+    // community regexes, in order to minimize the number of atomic predicates that are
+    // created and tracked by the analysis
+    _communityRegexes =
+        ImmutableSet.<String>builder()
+            .addAll(_inputConstraints.getCommunities().getAllRegexes())
+            .addAll(_outputConstraints.getCommunities().getAllRegexes())
+            .build();
     _asPathRegexes =
         ImmutableSet.<String>builder()
             .addAll(_inputConstraints.getAsPath().getAllRegexes())
@@ -458,7 +468,13 @@ public final class SearchRoutePoliciesAnswerer extends Answerer {
    */
   private Stream<Result> searchPoliciesForNode(String node, Set<RoutingPolicy> policies) {
     Graph g =
-        new Graph(_batfish, _batfish.getSnapshot(), null, ImmutableSet.of(node), _asPathRegexes);
+        new Graph(
+            _batfish,
+            _batfish.getSnapshot(),
+            null,
+            ImmutableSet.of(node),
+            _communityRegexes,
+            _asPathRegexes);
 
     return policies.stream()
         .map(policy -> searchPolicy(policy, g))

@@ -4,6 +4,7 @@ import static org.junit.Assert.assertEquals;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedMap;
 import java.util.Map;
 import java.util.Set;
@@ -52,7 +53,14 @@ public class CommunitySetMatchExprToBDDTest {
 
     _batfish = new TransferBDDTest.MockBatfish(ImmutableSortedMap.of(HOSTNAME, _baseConfig));
 
-    _g = new Graph(_batfish, _batfish.getSnapshot(), null, null, null);
+    _g =
+        new Graph(
+            _batfish,
+            _batfish.getSnapshot(),
+            null,
+            null,
+            ImmutableSet.of("^20:", ":30$", "^20:30$", "^21:30$"),
+            null);
     BDDRoute bddRoute = new BDDRoute(_g);
     TransferBDD transferBDD = new TransferBDD(_g, _baseConfig, ImmutableList.of());
     _arg = new CommunitySetMatchExprToBDD.Arg(transferBDD, bddRoute);

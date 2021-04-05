@@ -821,7 +821,7 @@ public class TransferBDDTest {
   }
 
   @Test
-  public void testDeleteCommunityWithSetCommunities() {
+  public void testDeleteCommunity() {
     RoutingPolicy policy =
         _policyBuilder
             .addStatement(
@@ -839,6 +839,7 @@ public class TransferBDDTest {
             null,
             null,
             // add another community to be tracked by the analysis
+            ImmutableSet.of("^3:33$"),
             null);
 
     TransferBDD tbdd = new TransferBDD(_g, _baseConfig, policy.getStatements());
@@ -873,7 +874,7 @@ public class TransferBDDTest {
   }
 
   @Test
-  public void testAddCommunityWithSetCommunities() {
+  public void testAddCommunity() {
     RoutingPolicy policy =
         _policyBuilder
             .addStatement(
@@ -890,6 +891,7 @@ public class TransferBDDTest {
             null,
             null,
             // add another community to be tracked by the analysis
+            ImmutableSet.of("^3:33$"),
             null);
 
     TransferBDD tbdd = new TransferBDD(_g, _baseConfig, policy.getStatements());

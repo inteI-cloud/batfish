@@ -55,8 +55,15 @@ import org.batfish.datamodel.questions.BgpRoute;
 import org.batfish.datamodel.questions.BgpRouteDiff;
 import org.batfish.datamodel.questions.BgpRouteDiffs;
 import org.batfish.datamodel.routing_policy.RoutingPolicy;
+import org.batfish.datamodel.routing_policy.communities.ColonSeparatedRendering;
+import org.batfish.datamodel.routing_policy.communities.CommunityIs;
+import org.batfish.datamodel.routing_policy.communities.CommunityMatchRegex;
 import org.batfish.datamodel.routing_policy.communities.CommunitySet;
+import org.batfish.datamodel.routing_policy.communities.CommunitySetDifference;
+import org.batfish.datamodel.routing_policy.communities.HasCommunity;
+import org.batfish.datamodel.routing_policy.communities.InputCommunities;
 import org.batfish.datamodel.routing_policy.communities.LiteralCommunitySet;
+import org.batfish.datamodel.routing_policy.communities.MatchCommunities;
 import org.batfish.datamodel.routing_policy.communities.SetCommunities;
 import org.batfish.datamodel.routing_policy.expr.DestinationNetwork;
 import org.batfish.datamodel.routing_policy.expr.ExplicitPrefixSet;
@@ -145,6 +152,12 @@ public class SearchRoutePoliciesAnswererTest {
   private MatchPrefixSet matchPrefixSet(List<PrefixRange> prList) {
     return new MatchPrefixSet(
         DestinationNetwork.instance(), new ExplicitPrefixSet(new PrefixSpace(prList)));
+  }
+
+  private MatchCommunities matchCommunityRegex(String regex) {
+    return new MatchCommunities(
+        InputCommunities.instance(),
+        new HasCommunity(new CommunityMatchRegex(ColonSeparatedRendering.instance(), regex)));
   }
 
   /** Test that we handle potential nulls in question parameters */
@@ -289,6 +302,89 @@ public class SearchRoutePoliciesAnswererTest {
   }
 
   @Test
+  public void testMatchRegexCommunity() {
+    _policyBuilder.addStatement(
+        new If(
+            matchCommunityRegex("^2[0-9]:30$"),
+            ImmutableList.of(new StaticStatement(Statements.ExitAccept))));
+    RoutingPolicy policy = _policyBuilder.build();
+
+    SearchRoutePoliciesQuestion question =
+        new SearchRoutePoliciesQuestion(
+            BgpRouteConstraints.builder()
+                .setCommunities(
+                    new RegexConstraints(ImmutableList.of(RegexConstraint.parse("!20:30"))))
+                .build(),
+            EMPTY_CONSTRAINTS,
+            HOSTNAME,
+            policy.getName(),
+            Action.PERMIT);
+    SearchRoutePoliciesAnswerer answerer = new SearchRoutePoliciesAnswerer(question, _batfish);
+
+    TableAnswerElement answer = (TableAnswerElement) answerer.answer(_batfish.getSnapshot());
+
+    BgpRoute inputRoute =
+        BgpRoute.builder()
+            .setNetwork(Prefix.parse("0.0.0.0/0"))
+            .setCommunities(ImmutableSet.of(StandardCommunity.parse("21:30")))
+            .setOriginatorIp(Ip.ZERO)
+            .setOriginType(OriginType.IGP)
+            .setProtocol(RoutingProtocol.BGP)
+            .build();
+
+    BgpRouteDiffs diff = new BgpRouteDiffs(ImmutableSet.of());
+
+    assertThat(
+        answer.getRows().getData(),
+        Matchers.contains(
+            allOf(
+                hasColumn(COL_NODE, equalTo(new Node(HOSTNAME)), Schema.NODE),
+                hasColumn(COL_POLICY_NAME, equalTo(policy.getName()), Schema.STRING),
+                hasColumn(COL_ACTION, equalTo(PERMIT.toString()), Schema.STRING),
+                hasColumn(COL_INPUT_ROUTE, equalTo(inputRoute), Schema.BGP_ROUTE),
+                hasColumn(COL_OUTPUT_ROUTE, equalTo(inputRoute), Schema.BGP_ROUTE),
+                hasColumn(COL_DIFF, equalTo(diff), Schema.BGP_ROUTE_DIFFS))));
+  }
+
+  @Test
+  public void testMatchGeneralRegexCommunity() {
+    _policyBuilder.addStatement(
+        new If(
+            matchCommunityRegex("^.*$"),
+            ImmutableList.of(new StaticStatement(Statements.ExitAccept))));
+    RoutingPolicy policy = _policyBuilder.build();
+
+    SearchRoutePoliciesQuestion question =
+        new SearchRoutePoliciesQuestion(
+            EMPTY_CONSTRAINTS, EMPTY_CONSTRAINTS, HOSTNAME, policy.getName(), Action.PERMIT);
+    SearchRoutePoliciesAnswerer answerer = new SearchRoutePoliciesAnswerer(question, _batfish);
+
+    TableAnswerElement answer = (TableAnswerElement) answerer.answer(_batfish.getSnapshot());
+
+    BgpRoute inputRoute =
+        BgpRoute.builder()
+            .setNetwork(Prefix.parse("0.0.0.0/0"))
+            .setCommunities(ImmutableSet.of(StandardCommunity.parse("0:0")))
+            .setOriginatorIp(Ip.ZERO)
+            .setOriginType(OriginType.IGP)
+            .setProtocol(RoutingProtocol.BGP)
+            .build();
+
+    BgpRouteDiffs diff = new BgpRouteDiffs(ImmutableSet.of());
+
+    assertThat(
+        answer.getRows().getData(),
+        Matchers.contains(
+            allOf(
+                hasColumn(COL_NODE, equalTo(new Node(HOSTNAME)), Schema.NODE),
+                hasColumn(COL_POLICY_NAME, equalTo(policy.getName()), Schema.STRING),
+                hasColumn(COL_ACTION, equalTo(PERMIT.toString()), Schema.STRING),
+                hasColumn(COL_INPUT_ROUTE, equalTo(inputRoute), Schema.BGP_ROUTE),
+                hasColumn(COL_OUTPUT_ROUTE, equalTo(inputRoute), Schema.BGP_ROUTE),
+                hasColumn(COL_DIFF, equalTo(diff), Schema.BGP_ROUTE_DIFFS))));
+  }
+
+  @Test
   public void testCommunityConstraints() {
     RoutingPolicy policy =
         _policyBuilder.addStatement(new StaticStatement(Statements.ExitAccept)).build();
@@ -331,6 +427,91 @@ public class SearchRoutePoliciesAnswererTest {
                 hasColumn(COL_ACTION, equalTo(PERMIT.toString()), Schema.STRING),
                 hasColumn(COL_INPUT_ROUTE, equalTo(inputRoute), Schema.BGP_ROUTE),
                 hasColumn(COL_OUTPUT_ROUTE, equalTo(inputRoute), Schema.BGP_ROUTE),
+                hasColumn(COL_DIFF, equalTo(diff), Schema.BGP_ROUTE_DIFFS))));
+  }
+
+  @Test
+  public void testUnsolvableCommunityConstraint() {
+    _policyBuilder.setStatements(
+        ImmutableList.of(
+            new SetCommunities(
+                new CommunitySetDifference(
+                    InputCommunities.instance(),
+                    new CommunityIs(StandardCommunity.parse("20:30")))),
+            new StaticStatement(Statements.ExitAccept)));
+    RoutingPolicy policy = _policyBuilder.build();
+
+    SearchRoutePoliciesQuestion question =
+        new SearchRoutePoliciesQuestion(
+            EMPTY_CONSTRAINTS,
+            BgpRouteConstraints.builder()
+                .setCommunities(
+                    new RegexConstraints(ImmutableList.of(RegexConstraint.parse("20:30"))))
+                .build(),
+            HOSTNAME,
+            policy.getName(),
+            Action.PERMIT);
+    SearchRoutePoliciesAnswerer answerer = new SearchRoutePoliciesAnswerer(question, _batfish);
+
+    TableAnswerElement answer = (TableAnswerElement) answerer.answer(_batfish.getSnapshot());
+
+    assertEquals(answer.getRows().size(), 0);
+  }
+
+  @Test
+  public void testDeleteSetCommunityConstraint() {
+    _policyBuilder.setStatements(
+        ImmutableList.of(
+            new SetCommunities(
+                new LiteralCommunitySet(CommunitySet.of(StandardCommunity.parse("2:40")))),
+            new StaticStatement(Statements.ExitAccept)));
+    RoutingPolicy policy = _policyBuilder.build();
+
+    SearchRoutePoliciesQuestion question =
+        new SearchRoutePoliciesQuestion(
+            BgpRouteConstraints.builder()
+                .setCommunities(
+                    new RegexConstraints(ImmutableList.of(RegexConstraint.parse("1:40"))))
+                .build(),
+            EMPTY_CONSTRAINTS,
+            HOSTNAME,
+            policy.getName(),
+            Action.PERMIT);
+    SearchRoutePoliciesAnswerer answerer = new SearchRoutePoliciesAnswerer(question, _batfish);
+
+    TableAnswerElement answer = (TableAnswerElement) answerer.answer(_batfish.getSnapshot());
+
+    BgpRoute inputRoute =
+        BgpRoute.builder()
+            .setNetwork(Prefix.parse("0.0.0.0/0"))
+            .setOriginatorIp(Ip.ZERO)
+            .setOriginType(OriginType.IGP)
+            .setProtocol(RoutingProtocol.BGP)
+            .setCommunities(ImmutableSet.of(StandardCommunity.of(1, 40)))
+            .build();
+
+    BgpRoute outputRoute =
+        BgpRoute.builder()
+            .setNetwork(Prefix.parse("0.0.0.0/0"))
+            .setOriginatorIp(Ip.ZERO)
+            .setOriginType(OriginType.IGP)
+            .setProtocol(RoutingProtocol.BGP)
+            .setCommunities(ImmutableSet.of(StandardCommunity.of(2, 40)))
+            .build();
+
+    BgpRouteDiffs diff =
+        new BgpRouteDiffs(
+            ImmutableSet.of(new BgpRouteDiff(BgpRoute.PROP_COMMUNITIES, "[1:40]", "[2:40]")));
+
+    assertThat(
+        answer.getRows().getData(),
+        Matchers.contains(
+            allOf(
+                hasColumn(COL_NODE, equalTo(new Node(HOSTNAME)), Schema.NODE),
+                hasColumn(COL_POLICY_NAME, equalTo(policy.getName()), Schema.STRING),
+                hasColumn(COL_ACTION, equalTo(PERMIT.toString()), Schema.STRING),
+                hasColumn(COL_INPUT_ROUTE, equalTo(inputRoute), Schema.BGP_ROUTE),
+                hasColumn(COL_OUTPUT_ROUTE, equalTo(outputRoute), Schema.BGP_ROUTE),
                 hasColumn(COL_DIFF, equalTo(diff), Schema.BGP_ROUTE_DIFFS))));
   }
 
@@ -885,6 +1066,32 @@ public class SearchRoutePoliciesAnswererTest {
                 hasColumn(COL_INPUT_ROUTE, equalTo(inputRoute), Schema.BGP_ROUTE),
                 hasColumn(COL_OUTPUT_ROUTE, equalTo(inputRoute), Schema.BGP_ROUTE),
                 hasColumn(COL_DIFF, equalTo(diff), Schema.BGP_ROUTE_DIFFS))));
+  }
+
+  @Test
+  public void testTwoVersionsOfACommunity() {
+    String regex = "^2[0-9]:30$";
+    _policyBuilder.addStatement(
+        new If(
+            matchCommunityRegex(regex),
+            ImmutableList.of(new StaticStatement(Statements.ExitAccept))));
+    RoutingPolicy policy = _policyBuilder.build();
+
+    SearchRoutePoliciesQuestion question =
+        new SearchRoutePoliciesQuestion(
+            EMPTY_CONSTRAINTS,
+            BgpRouteConstraints.builder()
+                .setCommunities(
+                    new RegexConstraints(ImmutableList.of(new RegexConstraint(regex, true))))
+                .build(),
+            HOSTNAME,
+            policy.getName(),
+            Action.PERMIT);
+    SearchRoutePoliciesAnswerer answerer = new SearchRoutePoliciesAnswerer(question, _batfish);
+
+    TableAnswerElement answer = (TableAnswerElement) answerer.answer(_batfish.getSnapshot());
+
+    assertEquals(0, answer.getRows().size());
   }
 
   @Test

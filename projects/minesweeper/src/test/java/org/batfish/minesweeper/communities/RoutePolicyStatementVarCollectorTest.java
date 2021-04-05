@@ -11,13 +11,13 @@ import org.batfish.datamodel.NetworkFactory;
 import org.batfish.datamodel.bgp.community.Community;
 import org.batfish.datamodel.bgp.community.StandardCommunity;
 import org.batfish.datamodel.routing_policy.communities.ColonSeparatedRendering;
+import org.batfish.datamodel.routing_policy.communities.CommunityMatchRegex;
 import org.batfish.datamodel.routing_policy.communities.CommunitySet;
-import org.batfish.datamodel.routing_policy.communities.CommunitySetMatchRegex;
+import org.batfish.datamodel.routing_policy.communities.HasCommunity;
 import org.batfish.datamodel.routing_policy.communities.InputCommunities;
 import org.batfish.datamodel.routing_policy.communities.LiteralCommunitySet;
 import org.batfish.datamodel.routing_policy.communities.MatchCommunities;
 import org.batfish.datamodel.routing_policy.communities.SetCommunities;
-import org.batfish.datamodel.routing_policy.communities.TypesFirstAscendingSpaceSeparated;
 import org.batfish.datamodel.routing_policy.statement.BufferedStatement;
 import org.batfish.datamodel.routing_policy.statement.If;
 import org.batfish.minesweeper.CommunityVar;
@@ -62,9 +62,8 @@ public class RoutePolicyStatementVarCollectorTest {
         new If(
             new MatchCommunities(
                 InputCommunities.instance(),
-                new CommunitySetMatchRegex(
-                    new TypesFirstAscendingSpaceSeparated(ColonSeparatedRendering.instance()),
-                    "^20:")),
+                new HasCommunity(
+                    new CommunityMatchRegex(ColonSeparatedRendering.instance(), "^20:"))),
             ImmutableList.of(new SetCommunities(new LiteralCommunitySet(CommunitySet.of(COMM1)))),
             ImmutableList.of(new SetCommunities(new LiteralCommunitySet(CommunitySet.of(COMM2)))));
 

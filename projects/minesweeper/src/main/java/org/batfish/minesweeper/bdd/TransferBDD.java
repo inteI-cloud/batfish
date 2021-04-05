@@ -999,9 +999,9 @@ public class TransferBDD {
   }
 
   /**
-   * A helper for route analysis of AddCommunity, DeleteCommunity, and uses of SetCommunities that
-   * add communities. Given a set of CommunityVars that are added by the statement, we set their
-   * BDDs to either 1 or 0, depending on the value of the boolean parameter.
+   * A helper for route analysis of uses of SetCommunities that add communities. Given a set of
+   * CommunityVars that are added by the statement, we set their BDDs to either 1 or 0, depending on
+   * the value of the boolean parameter.
    */
   private void addOrRemoveCommunities(
       Set<CommunityVar> comms, TransferParam<BDDRoute> curP, TransferResult result, boolean add) {
@@ -1036,11 +1036,10 @@ public class TransferBDD {
     }
   }
 
-  /*
-   * A helper for route analysis of SetCommunity and SetCommunities.  Given a set of
-   * CommunityVars that are set by the statement, we update all community atomic predicates
-   * appropriately:  the ones corresponding to the given CommunityVars are set to 1, and
-   * the others are set to 0.
+  /**
+   * A helper for route analysis of SetCommunities. Given a set of CommunityVars that are set by the
+   * statement, we update all community atomic predicates appropriately: the ones corresponding to
+   * the given CommunityVars are set to 1, and the others are set to 0.
    */
   private void setCommunities(
       Set<CommunityVar> comms, TransferParam<BDDRoute> curP, TransferResult result) {
