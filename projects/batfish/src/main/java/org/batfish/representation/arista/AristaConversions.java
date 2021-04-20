@@ -163,27 +163,27 @@ final class AristaConversions {
       return false;
     }
 
-    // No active address family that we support.
-    boolean v4 =
-        Optional.ofNullable(vrf.getV4UnicastAf())
-            .map(af -> af.getNeighbor(neighbor.getIp()))
-            .map(AristaBgpNeighborAddressFamily::getActivate)
-            .orElse(Boolean.FALSE);
-    boolean evpn =
-        Optional.ofNullable(vrf.getEvpnAf())
-            .map(af -> af.getNeighbor(neighbor.getIp()))
-            .map(AristaBgpNeighborAddressFamily::getActivate)
-            .orElse(Boolean.FALSE);
-    if (!v4 && !evpn) {
-      w.redFlag("No supported address-family configured for " + name);
-      return false;
-    }
-
-    // No remote AS set.
-    if (neighbor.getRemoteAs() == null) {
-      w.redFlag("No remote-as configured for " + name);
-      return false;
-    }
+    //    // No active address family that we support.
+    //    boolean v4 =
+    //        Optional.ofNullable(vrf.getV4UnicastAf())
+    //            .map(af -> af.getNeighbor(neighbor.getIp()))
+    //            .map(AristaBgpNeighborAddressFamily::getActivate)
+    //            .orElse(Boolean.FALSE);
+    //    boolean evpn =
+    //        Optional.ofNullable(vrf.getEvpnAf())
+    //            .map(af -> af.getNeighbor(neighbor.getIp()))
+    //            .map(AristaBgpNeighborAddressFamily::getActivate)
+    //            .orElse(Boolean.FALSE);
+    //    if (!v4 && !evpn) {
+    //      w.redFlag("No supported address-family configured for " + name);
+    //      return false;
+    //    }
+    //
+    //    // No remote AS set.
+    //    if (neighbor.getRemoteAs() == null) {
+    //      w.redFlag("No remote-as configured for " + name);
+    //      return false;
+    //    }
 
     return true;
   }
@@ -194,27 +194,27 @@ final class AristaConversions {
       return false;
     }
 
-    // No active address family that we support.
-    boolean v4 =
-        Optional.ofNullable(vrf.getV4UnicastAf())
-            .map(af -> af.getNeighbor(neighbor.getRange()))
-            .map(AristaBgpNeighborAddressFamily::getActivate)
-            .orElse(Boolean.FALSE);
-    boolean evpn =
-        Optional.ofNullable(vrf.getEvpnAf())
-            .map(af -> af.getNeighbor(neighbor.getRange()))
-            .map(AristaBgpNeighborAddressFamily::getActivate)
-            .orElse(Boolean.FALSE);
-    if (!v4 && !evpn) {
-      w.redFlag("No supported address-family configured for " + name);
-      return false;
-    }
-
-    // No remote AS set.
-    if (neighbor.getRemoteAs() == null && neighbor.getPeerFilter() == null) {
-      w.redFlag("No remote-as configured for " + name);
-      return false;
-    }
+    //    // No active address family that we support.
+    //    boolean v4 =
+    //        Optional.ofNullable(vrf.getV4UnicastAf())
+    //            .map(af -> af.getNeighbor(neighbor.getRange()))
+    //            .map(AristaBgpNeighborAddressFamily::getActivate)
+    //            .orElse(Boolean.FALSE);
+    //    boolean evpn =
+    //        Optional.ofNullable(vrf.getEvpnAf())
+    //            .map(af -> af.getNeighbor(neighbor.getRange()))
+    //            .map(AristaBgpNeighborAddressFamily::getActivate)
+    //            .orElse(Boolean.FALSE);
+    //    if (!v4 && !evpn) {
+    //      w.redFlag("No supported address-family configured for " + name);
+    //      return false;
+    //    }
+    //
+    //    // No remote AS set.
+    //    if (neighbor.getRemoteAs() == null && neighbor.getPeerFilter() == null) {
+    //      w.redFlag("No remote-as configured for " + name);
+    //      return false;
+    //    }
 
     return true;
   }

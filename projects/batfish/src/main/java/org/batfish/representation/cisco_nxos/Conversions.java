@@ -178,14 +178,14 @@ final class Conversions {
       return false;
     }
 
-    // No active address family that we support.
-    if (neighbor.getIpv4UnicastAddressFamily() == null
-        && neighbor.getIpv6UnicastAddressFamily() == null
-        && neighbor.getL2VpnEvpnAddressFamily() == null) {
-      w.redFlag("No supported address-family configured for " + name);
-      return false;
-    }
-
+    //    // No active address family that we support.
+    //    if (neighbor.getIpv4UnicastAddressFamily() == null
+    //        && neighbor.getIpv6UnicastAddressFamily() == null
+    //        && neighbor.getL2VpnEvpnAddressFamily() == null) {
+    //      w.redFlag("No supported address-family configured for " + name);
+    //      return false;
+    //    }
+    //
     return true;
   }
 
